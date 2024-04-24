@@ -6,9 +6,9 @@ import cx_Oracle
 import psycopg2
 import myLogger
 dbDna = {
-    'host':'172.18.62.38',
-    'username':'dna',
-    'password':'P@ssw0rd',
+    'host':'---.--.--.--',
+    'username':'---',
+    'password':'-------',
     'database':'DataAnalytics',
     'platform':'SQL Server'
 }
