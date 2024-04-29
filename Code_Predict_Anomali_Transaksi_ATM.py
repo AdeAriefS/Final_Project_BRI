@@ -10,16 +10,16 @@ import pyodbc
 
 dbATM = {
     'host': '172.18.61.214',
-    'username': 'dta_python',
-    'password': 'an4Lytics!@#',
+    'username': '',
+    'password': '',
     'database': 'PROSWITCHING',
     'platform': 'MySQL'
 }
 
 dbDNA = {
     'host': '172.18.62.38',
-    'username': 'dna',
-    'password': 'P@ssw0rd',
+    'username': '',
+    'password': '',
     'database': 'PROSWITCHING',
     'platform': 'SQL Server'
 }
@@ -247,8 +247,8 @@ def main():
         'Driver={ODBC Driver 17 for SQL Server};'
         'Server=172.18.62.38;'
         'PORT=1433;'
-        'UID=dna;'
-        'PWD=P@ssw0rd;'
+        'UID=;'
+        'PWD=;'
         'Database=PROSWITCHING;')
             df = pd.read_sql_query(query,conn)
         except Exception as e:
