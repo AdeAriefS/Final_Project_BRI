@@ -1,0 +1,786 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Final Project",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 1819,
+  "links": [],
+  "panels": [
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 8,
+      "options": {
+        "content": "<CENTER>\n<p style=\"background-color:#03ada8;\"><b><font size=\"15\" color=\"#FFFFFF\">Fitur [BRI] Cash Withdrawal</font></b></p>\n</CENTER>",
+        "mode": "markdown"
+      },
+      "pluginVersion": "7.3.2",
+      "targets": [
+        {
+          "queryType": "randomWalk",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "",
+      "type": "text"
+    },
+    {
+      "datasource": "172.18.62.38_DB DataAnalytics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "options": {
+        "content": "<CENTER>\n<p style=\"background-color:#32D218;\"><b><font size=\"8\" color=\"#000000\">Trx [BRI] Cash Withdrawal Success</font></b></p>\n</CENTER>",
+        "mode": "markdown"
+      },
+      "pluginVersion": "7.3.2",
+      "targets": [
+        {
+          "alias": "",
+          "format": "time_series",
+          "rawSql": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "",
+      "transformations": [],
+      "type": "text"
+    },
+    {
+      "aliasColors": {
+        "ori_total_trx": "dark-red",
+        "pred_total_trx": "super-light-purple"
+      },
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "172.18.62.38_DB DataAnalytics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 2,
+      "fillGradient": 3,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 3,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "",
+          "format": "time_series",
+          "queryType": "randomWalk",
+          "rawSql": "\nDECLARE @fitur VARCHAR(50)\nDECLARE @isocode VARCHAR(50)\nDECLARE @is_success VARCHAR(20)\nDECLARE @max_date datetime\nDECLARE @yesterday_date datetime\nDECLARE @total_in_summary_daily INT\nDECLARE @total_in_summary_h1 INT\nDECLARE @backdate_days_interval int\n\nset @backdate_days_interval = 7\nselect @yesterday_date  = convert(varchar(10),getdate()-1,120)\nselect @total_in_summary_daily =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\nselect @total_in_summary_h1 =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_H1 where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\n--select @total_in_summary_daily,@total_in_summary_h1\nset @max_date = convert(datetime,\n CONVERT(VARCHAR(14),getdate(),120) \n\t\t+  RIGHT('00'+ CONVERT(varchar(2), (DATEPART(minute,getdate()) / 30) * 30),2) + ':00',120)\nSET @fitur = '[BRI] CASH WITHDRAWAL'\nSET @is_success = 'sukses'\nset @isocode = '210'\n\n\n\nIF @total_in_summary_daily > 0 \nBEGIN\n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, total_trx num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, total_trx num from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t), combine as (\n\tselect  DATEADD(HOUR, -7, trx_date) trx_date,metric,num from ori_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date\nEND\nELSE \nBEGIN \n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, total_trx num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, total_trx num from PROSWITCHING.dbo.atm_transaction_summary_daily_H1\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, total_trx num from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\t), combine as (\n\tselect  DATEADD(HOUR, -7, trx_date) trx_date,metric,num from ori_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date,metric\nEND \n\n",
+          "refId": "A"
+        },
+        {
+          "alias": "",
+          "format": "time_series",
+          "rawSql": "\nDECLARE @fitur VARCHAR(50)\nDECLARE @isocode VARCHAR(50)\nDECLARE @is_success VARCHAR(20)\nDECLARE @max_date datetime\nDECLARE @yesterday_date datetime\nDECLARE @total_in_summary_daily INT\nDECLARE @total_in_summary_h1 INT\nDECLARE @backdate_days_interval int\n\nset @backdate_days_interval = 7\nselect @yesterday_date  = convert(varchar(10),getdate()-1,120)\nselect @total_in_summary_daily =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\nselect @total_in_summary_h1 =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_H1 where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\n--select @total_in_summary_daily,@total_in_summary_h1\nset @max_date = convert(datetime,\n CONVERT(VARCHAR(14),getdate(),120) \n\t\t+  RIGHT('00'+ CONVERT(varchar(2), (DATEPART(minute,getdate()) / 30) * 30),2) + ':00',120)\nSET @fitur = '[BRI] CASH WITHDRAWAL'\nSET @is_success = 'sukses'\nset @isocode = '210'\n\n\n\nIF @total_in_summary_daily > 0 \nBEGIN\n\twith pred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, total_trx num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t), combine as (\n\tselect DATEADD(HOUR, -7, trx_date) trx_date,metric,num from pred_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date\nEND\nELSE \nBEGIN \n    with pred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, total_trx num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t), combine as (\n\tselect DATEADD(HOUR, -7, trx_date) trx_date,metric,num from pred_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date,metric\nEND \n\n",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "TOTAL TRX [BRI] CASH WITHDRAWAL TRX SUCCESS",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 2,
+          "format": "locale",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": 2,
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "ori_total_amount": "dark-red",
+        "pred_total_amount": "super-light-purple"
+      },
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "172.18.62.38_DB DataAnalytics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 2,
+      "fillGradient": 3,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "hiddenSeries": false,
+      "id": 12,
+      "legend": {
+        "alignAsTable": false,
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 3,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "",
+          "format": "time_series",
+          "queryType": "randomWalk",
+          "rawSql": "DECLARE @fitur VARCHAR(50)\nDECLARE @isocode VARCHAR(50)\nDECLARE @is_success VARCHAR(20)\nDECLARE @max_date datetime\nDECLARE @yesterday_date datetime\nDECLARE @total_in_summary_daily INT\nDECLARE @total_in_summary_h1 INT\nDECLARE @backdate_days_interval int\n\nset @backdate_days_interval = 7\nselect @yesterday_date  = convert(varchar(10),getdate()-1,120)\nselect @total_in_summary_daily =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\nselect @total_in_summary_h1 =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_H1 where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\n--select @total_in_summary_daily,@total_in_summary_h1\nset @max_date = convert(datetime,\n CONVERT(VARCHAR(14),getdate(),120) \n\t\t+  RIGHT('00'+ CONVERT(varchar(2), (DATEPART(minute,getdate()) / 30) * 30),2) + ':00',120)\nSET @fitur = '[BRI] CASH WITHDRAWAL'\nSET @is_success = 'sukses'\nset @isocode = '210'\n\n\nIF @total_in_summary_daily > 0 \nBEGIN\n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_amount' metric, total_amount num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tunion all \n\tSELECT  trx_date,'ori_total_amount' metric, total_amount num  FROM PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t), combine as (\n\tselect  DATEADD(HOUR, -7, trx_date) trx_date,metric,num from ori_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date\nEND\nELSE \nBEGIN \n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_amount' metric, total_amount num FROM  PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tunion all \n\tSELECT  trx_date,'ori_total_amount' metric, total_amount num from PROSWITCHING.dbo.atm_transaction_summary_daily_H1\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tunion all \n\tSELECT  trx_date,'ori_total_amount' metric, total_amount num from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\t), combine as (\n\tselect  DATEADD(HOUR, -7, trx_date) trx_date,metric,num from ori_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date\nEND \n\n",
+          "refId": "A"
+        },
+        {
+          "alias": "",
+          "format": "time_series",
+          "rawSql": "DECLARE @fitur VARCHAR(50)\nDECLARE @isocode VARCHAR(50)\nDECLARE @is_success VARCHAR(20)\nDECLARE @max_date datetime\nDECLARE @yesterday_date datetime\nDECLARE @total_in_summary_daily INT\nDECLARE @total_in_summary_h1 INT\nDECLARE @backdate_days_interval int\n\nset @backdate_days_interval = 7\nselect @yesterday_date  = convert(varchar(10),getdate()-1,120)\nselect @total_in_summary_daily =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\nselect @total_in_summary_h1 =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_H1 where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\n--select @total_in_summary_daily,@total_in_summary_h1\nset @max_date = convert(datetime,\n CONVERT(VARCHAR(14),getdate(),120) \n\t\t+  RIGHT('00'+ CONVERT(varchar(2), (DATEPART(minute,getdate()) / 30) * 30),2) + ':00',120)\nSET @fitur = '[BRI] CASH WITHDRAWAL'\nSET @is_success = 'sukses'\nset @isocode = '210'\n\n\nIF @total_in_summary_daily > 0 \nBEGIN\n\twith pred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_amount' metric, total_amount num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t), combine as (\n\tselect DATEADD(HOUR, -7, trx_date) trx_date,metric,num from pred_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date\nEND\nELSE \nBEGIN \n\twith pred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_amount' metric, total_amount num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t), combine as (\n\tselect DATEADD(HOUR, -7, trx_date) trx_date,metric,num from pred_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date\nEND \n\n",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "TOTAL AMOUNT [BRI] CASH WITHDRAWAL TRX SUCCESS",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 2,
+          "format": "locale",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": 2,
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "172.18.62.38_DB DataAnalytics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 9,
+      "options": {
+        "content": "<CENTER>\n<p style=\"background-color:#FFF701;\"><b><font size=\"15\" color=\"#000000\">Trx [BRI] CASH WITHDRAWAL Fail Customer</font></b></p>\n</CENTER>",
+        "mode": "markdown"
+      },
+      "pluginVersion": "7.3.2",
+      "targets": [
+        {
+          "alias": "",
+          "format": "time_series",
+          "rawSql": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "",
+      "transformations": [],
+      "type": "text"
+    },
+    {
+      "aliasColors": {
+        "ori_total_trx": "semi-dark-blue",
+        "pred_total_trx": "dark-orange"
+      },
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "172.18.62.38_DB DataAnalytics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 2,
+      "fillGradient": 3,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "hiddenSeries": false,
+      "id": 11,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 3,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "",
+          "format": "time_series",
+          "queryType": "randomWalk",
+          "rawSql": "\nDECLARE @fitur VARCHAR(50)\nDECLARE @isocode VARCHAR(50)\nDECLARE @is_success VARCHAR(20)\nDECLARE @max_date datetime\nDECLARE @yesterday_date datetime\nDECLARE @total_in_summary_daily INT\nDECLARE @total_in_summary_h1 INT\nDECLARE @backdate_days_interval int\n\nset @backdate_days_interval = 7\nselect @yesterday_date  = convert(varchar(10),getdate()-1,120)\nselect @total_in_summary_daily =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\nselect @total_in_summary_h1 =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_H1 where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\n--select @total_in_summary_daily,@total_in_summary_h1\nset @max_date = convert(datetime,\n CONVERT(VARCHAR(14),getdate(),120) \n\t\t+  RIGHT('00'+ CONVERT(varchar(2), (DATEPART(minute,getdate()) / 30) * 30),2) + ':00',120)\nSET @fitur = '[BRI] CASH WITHDRAWAL'\nSET @is_success = 'gagal_bisnis'\nset @isocode = '210'\n\n\n\nIF @total_in_summary_daily > 0 \nBEGIN\n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx) num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx) num  from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and isocode =  @isocode\n\tgroup by trx_date,is_success\n\t),\n\tpred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, sum(total_trx)  num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t\tgroup by trx_date,is_success\n\t), combine as (\n\tselect  DATEADD(HOUR, -7, trx_date) trx_date,metric,num from ori_total_trx\n\tunion all \n\tselect DATEADD(HOUR, -7, trx_date) trx_date,metric,num from pred_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date\nEND\nELSE \nBEGIN \n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx)  num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx)  num from PROSWITCHING.dbo.atm_transaction_summary_daily_H1\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx)  num from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tgroup by trx_date,is_success\n\t),\n\tpred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, sum(total_trx)  num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t\tgroup by trx_date,is_success\n\t), combine as (\n\tselect  DATEADD(HOUR, -7, trx_date) trx_date,metric,num from ori_total_trx\n\tunion all \n\tselect DATEADD(HOUR, -7, trx_date) trx_date,metric,num from pred_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date,metric\nEND \n\n",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "TOTAL TRX [BRI] CASH WITHDRAWAL TRX GAGAL BISNIS",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 2,
+          "format": "locale",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": 2,
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {
+        "ori_total_trx": "semi-dark-blue",
+        "pred_total_trx": "semi-dark-orange"
+      },
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "172.18.62.38_DB DataAnalytics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 2,
+      "fillGradient": 3,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "hiddenSeries": false,
+      "id": 13,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 3,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "",
+          "format": "time_series",
+          "queryType": "randomWalk",
+          "rawSql": "\nDECLARE @fitur VARCHAR(50)\nDECLARE @isocode VARCHAR(50)\nDECLARE @is_success VARCHAR(20)\nDECLARE @max_date datetime\nDECLARE @yesterday_date datetime\nDECLARE @total_in_summary_daily INT\nDECLARE @total_in_summary_h1 INT\nDECLARE @backdate_days_interval int\n\nset @backdate_days_interval = 7\nselect @yesterday_date  = convert(varchar(10),getdate()-1,120)\nselect @total_in_summary_daily =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\nselect @total_in_summary_h1 =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_H1 where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\n--select @total_in_summary_daily,@total_in_summary_h1\nset @max_date = convert(datetime,\n CONVERT(VARCHAR(14),getdate(),120) \n\t\t+  RIGHT('00'+ CONVERT(varchar(2), (DATEPART(minute,getdate()) / 30) * 30),2) + ':00',120)\nSET @fitur = '[BRI] CASH WITHDRAWAL'\nSET @is_success = 'gagal_bisnis'\nset @isocode = '210'\n\n\n\nIF @total_in_summary_daily > 0 \nBEGIN\n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount) num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount) num  from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and isocode =  @isocode\n\tgroup by trx_date,is_success\n\t),\n\tpred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, sum(total_amount)  num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t\tgroup by trx_date,is_success\n\t), combine as (\n\tselect  DATEADD(HOUR, -7, trx_date) trx_date,metric,num from ori_total_trx\n\tunion all \n\tselect DATEADD(HOUR, -7, trx_date) trx_date,metric,num from pred_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date\nEND\nELSE \nBEGIN \n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount)  num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount)  num from PROSWITCHING.dbo.atm_transaction_summary_daily_H1\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount)  num from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tgroup by trx_date,is_success\n\t),\n\tpred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, sum(total_amount)  num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t\tgroup by trx_date,is_success\n\t), combine as (\n\tselect  DATEADD(HOUR, -7, trx_date) trx_date,metric,num from ori_total_trx\n\tunion all \n\tselect DATEADD(HOUR, -7, trx_date) trx_date,metric,num from pred_total_trx\n\t)\n\tselect trx_date as time, metric, num from combine\n\torder by trx_date,metric\nEND \n\n",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "TOTAL AMOUNT [BRI] CASH WITHDRAWAL TRX GAGAL BISNIS",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 2,
+          "format": "locale",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": 2,
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "172.18.62.38_DB DataAnalytics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 10,
+      "options": {
+        "content": "<CENTER>\n<p style=\"background-color:#F90E0E;\"><b><font size=\"15\" color=\"#000000\">Trx [BRI] CASH WITHDRAWAL Fail System</font></b></p>\n</CENTER>",
+        "mode": "markdown"
+      },
+      "pluginVersion": "7.3.2",
+      "targets": [
+        {
+          "alias": "",
+          "format": "time_series",
+          "rawSql": "",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "",
+      "transformations": [],
+      "type": "text"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "172.18.62.38_DB DataAnalytics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 2,
+      "fillGradient": 3,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "hiddenSeries": false,
+      "id": 14,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 3,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "",
+          "format": "time_series",
+          "queryType": "randomWalk",
+          "rawSql": "\nDECLARE @fitur VARCHAR(50)\nDECLARE @isocode VARCHAR(50)\nDECLARE @is_success VARCHAR(20)\nDECLARE @max_date datetime\nDECLARE @yesterday_date datetime\nDECLARE @total_in_summary_daily INT\nDECLARE @total_in_summary_h1 INT\nDECLARE @backdate_days_interval int\n\nset @backdate_days_interval = 7\nselect @yesterday_date  = convert(varchar(10),getdate()-1,120)\nselect @total_in_summary_daily =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\nselect @total_in_summary_h1 =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_H1 where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\n--select @total_in_summary_daily,@total_in_summary_h1\nset @max_date = convert(datetime,\n CONVERT(VARCHAR(14),getdate(),120) \n\t\t+  RIGHT('00'+ CONVERT(varchar(2), (DATEPART(minute,getdate()) / 30) * 30),2) + ':00',120)\nSET @fitur = '[BRI] CASH WITHDRAWAL'\nSET @is_success = 'gagal_sistem'\nset @isocode = '210'\n\n\n\nIF @total_in_summary_daily > 0 \nBEGIN\n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx) num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx) num  from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and isocode =  @isocode\n\tgroup by trx_date,is_success\n\t),\n\tpred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, sum(total_trx)  num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t\tgroup by trx_date,is_success\n\t), combine as (\n select  DATEADD(HOUR, -7, trx_date) trx_date,metric, \n    -- Filter nilai negatif menjadi 0\n    CASE \n        WHEN num < 0 THEN 0 \n        ELSE num \n    END AS num\n    from ori_total_trx\n    union all \n    select DATEADD(HOUR, -7, trx_date) trx_date,metric, \n    -- Filter nilai negatif menjadi 0\n    CASE \n        WHEN num < 0 THEN 0 \n        ELSE num \n    END AS num\n    from pred_total_trx\n    )\n    select trx_date as time, metric, num from combine\n    where num > 0\n    order by trx_date\nEND\nELSE \nBEGIN \n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx)  num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx)  num from PROSWITCHING.dbo.atm_transaction_summary_daily_H1\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_trx)  num from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tgroup by trx_date,is_success\n\t),\n\tpred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, sum(total_trx)  num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t\tgroup by trx_date,is_success\n\t), combine as (\n select  DATEADD(HOUR, -7, trx_date) trx_date,metric, \n    -- Filter nilai negatif menjadi 0\n    CASE \n        WHEN num < 0 THEN 0 \n        ELSE num \n    END AS num\n    from ori_total_trx\n    union all \n    select DATEADD(HOUR, -7, trx_date) trx_date,metric, \n    -- Filter nilai negatif menjadi 0\n    CASE \n        WHEN num < 0 THEN 0 \n        ELSE num \n    END AS num\n    from pred_total_trx\n    )\n    select trx_date as time, metric, num from combine\n    where num > 0\n    order by trx_date,metric\nEND \n\n",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "TOTAL TRX [BRI] CASH WITHDRAWAL TRX GAGAL SISTEM",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 2,
+          "format": "locale",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": 2,
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "172.18.62.38_DB DataAnalytics",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 2,
+      "fillGradient": 3,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "hiddenSeries": false,
+      "id": 15,
+      "legend": {
+        "avg": true,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 3,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.2",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "alias": "",
+          "format": "time_series",
+          "queryType": "randomWalk",
+          "rawSql": "\nDECLARE @fitur VARCHAR(50)\nDECLARE @isocode VARCHAR(50)\nDECLARE @is_success VARCHAR(20)\nDECLARE @max_date datetime\nDECLARE @yesterday_date datetime\nDECLARE @total_in_summary_daily INT\nDECLARE @total_in_summary_h1 INT\nDECLARE @backdate_days_interval int\n\nset @backdate_days_interval = 7\nselect @yesterday_date  = convert(varchar(10),getdate()-1,120)\nselect @total_in_summary_daily =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\nselect @total_in_summary_h1 =  count(1) from  PROSWITCHING.dbo.atm_transaction_summary_daily_H1 where convert(varchar(10),trx_date,120) = convert(varchar(10),@yesterday_date,120)\n--select @total_in_summary_daily,@total_in_summary_h1\nset @max_date = convert(datetime,\n CONVERT(VARCHAR(14),getdate(),120) \n\t\t+  RIGHT('00'+ CONVERT(varchar(2), (DATEPART(minute,getdate()) / 30) * 30),2) + ':00',120)\nSET @fitur = '[BRI] CASH WITHDRAWAL'\nSET @is_success = 'gagal_sistem'\nset @isocode = '210'\n\n\n\nIF @total_in_summary_daily > 0 \nBEGIN\n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount) num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount) num  from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and isocode =  @isocode\n\tgroup by trx_date,is_success\n\t),\n\tpred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, sum(total_amount)  num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t\tgroup by trx_date,is_success\n\t), combine as (\n select  DATEADD(HOUR, -7, trx_date) trx_date,metric, \n    -- Filter nilai negatif menjadi 0\n    CASE \n        WHEN num < 0 THEN 0 \n        ELSE num \n    END AS num\n    from ori_total_trx\n    union all \n    select DATEADD(HOUR, -7, trx_date) trx_date,metric, \n    -- Filter nilai negatif menjadi 0\n    CASE \n        WHEN num < 0 THEN 0 \n        ELSE num \n    END AS num\n    from pred_total_trx\n    )\n    select trx_date as time, metric, num from combine\n    where num > 0\n    order by trx_date\nEND\nELSE \nBEGIN \n\twith ori_total_trx as (\n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount)  num FROM PROSWITCHING.dbo.atm_transaction_summary_daily_per30m where\n\tfitur = @fitur and is_success = @is_success  and isocode =  @isocode\n\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount)  num from PROSWITCHING.dbo.atm_transaction_summary_daily_H1\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tgroup by trx_date,is_success\n\tunion all \n\tSELECT  trx_date,'ori_total_trx' metric, sum(total_amount)  num from PROSWITCHING.dbo.atm_transaction_realtime_grouping\n\twhere  fitur = @fitur and is_success = @is_success and  isocode =  @isocode\n\tgroup by trx_date,is_success\n\t),\n\tpred_total_trx as (\n\t\tSELECT  trx_date,'pred_total_trx' metric, sum(total_amount)  num FROM PROSWITCHING.dbo.atm_transaction_predict_new where\n\t\tfitur = @fitur and is_success = @is_success and isocode =  @isocode\n\t\tand DATEDIFF(day,trx_date,getdate()) <= @backdate_days_interval\n\t\tand DATEDIFF(MINUTE,trx_date,@max_date) > 0\n\t\tgroup by trx_date,is_success\n\t), combine as (\n select  DATEADD(HOUR, -7, trx_date) trx_date,metric, \n    -- Filter nilai negatif menjadi 0\n    CASE \n        WHEN num < 0 THEN 0 \n        ELSE num \n    END AS num\n    from ori_total_trx\n    union all \n    select DATEADD(HOUR, -7, trx_date) trx_date,metric, \n    -- Filter nilai negatif menjadi 0\n    CASE \n        WHEN num < 0 THEN 0 \n        ELSE num \n    END AS num\n    from pred_total_trx\n    )\n    select trx_date as time, metric, num from combine\n    where num > 0\n    order by trx_date,metric\nEND \n\n",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "TOTAL AMOUNT [BRI] CASH WITHDRAWAL TRX GAGAL SISTEM",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "decimals": 2,
+          "format": "locale",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "decimals": 2,
+          "format": "none",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 26,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "New Dashboard Anomali Transaksi ATM(On Process)",
+  "uid": "wZvnoaxIk",
+  "version": 29
+}
