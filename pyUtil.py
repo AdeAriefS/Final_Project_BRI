@@ -3,9 +3,9 @@ import base64
 from datetime import datetime,timedelta,date
 
 dbDNA = {
-    'host':'172.18.62.38',
-    'username':'dna',
-    'password':'P@ssw0rd',
+    'host':'---.--.--.--',
+    'username':'----',
+    'password':'---------',
     'database':'DataAnalytics',
     'platform':'SQL Server'
 }
